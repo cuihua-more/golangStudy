@@ -3,10 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"net"
+	"os"
 )
 
-type Clinet struct {
+type Clinent struct {
 	ServerIP   string
 	ServerPort int
 
@@ -15,9 +17,9 @@ type Clinet struct {
 	flag int
 }
 
-func NewClient(serverIp string, serverPort int) *Clinet {
+func NewClient(serverIp string, serverPort int) *Clinent {
 	// 创建客户端对象
-	client := &Clinet{
+	client := &Clinent{
 		ServerIP:   serverIp,
 		ServerPort: serverPort,
 		flag:       999,
@@ -35,7 +37,12 @@ func NewClient(serverIp string, serverPort int) *Clinet {
 	return client
 }
 
-func (this *Clinet) menu() bool {
+// 处理server端回应的消息，直接显示到标准输出
+func (this *Clinent) DealResponse() {
+	io.Copy(os.Stdout, this.conn) // io.copy方法会不断的调用this.conn总的read方法，读取处理，然后调用os.Stdout中的write方法，将数据写入
+}
+
+func (this *Clinent) menu() bool {
 	var flag int
 
 	fmt.Println("1. 公聊模式")
@@ -54,7 +61,22 @@ func (this *Clinet) menu() bool {
 	}
 }
 
-func (this *Clinet) Run() {
+func (this *Clinent) UpdateName() bool {
+	fmt.Println("请输入用户名：")
+	fmt.Scanln(&this.Name)
+
+	sendMsg := "rename|" + this.Name + "\n"
+
+	_, err := this.conn.Write([]byte(sendMsg))
+	if err != nil {
+		fmt.Println("更新用户名失败")
+		return false
+	} else {
+		return true
+	}
+}
+
+func (this *Clinent) Run() {
 	for this.flag != 0 {
 		for this.menu() != true {
 		}
@@ -68,7 +90,8 @@ func (this *Clinet) Run() {
 			fmt.Println("私聊模式选择...")
 			break
 		case 3:
-			fmt.Println("更新用户名选择...")
+			// fmt.Println("更新用户名选择...")
+			this.UpdateName()
 			break
 		}
 	}
@@ -94,6 +117,8 @@ func main() {
 		return
 	}
 
+	// 单独开启一个goroutine，
+	go client.DealResponse()
 	fmt.Println(">>>>>>>>>>> 连接服务器成功...")
 
 	client.Run()
