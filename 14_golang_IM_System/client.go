@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-type Clinent struct {
+type Client struct {
 	ServerIP   string
 	ServerPort int
 
@@ -17,9 +17,9 @@ type Clinent struct {
 	flag int
 }
 
-func NewClient(serverIp string, serverPort int) *Clinent {
+func NewClient(serverIp string, serverPort int) *Client {
 	// 创建客户端对象
-	client := &Clinent{
+	client := &Client{
 		ServerIP:   serverIp,
 		ServerPort: serverPort,
 		flag:       999,
@@ -38,11 +38,11 @@ func NewClient(serverIp string, serverPort int) *Clinent {
 }
 
 // 处理server端回应的消息，直接显示到标准输出
-func (this *Clinent) DealResponse() {
+func (this *Client) DealResponse() {
 	io.Copy(os.Stdout, this.conn) // io.copy方法会不断的调用this.conn总的read方法，读取处理，然后调用os.Stdout中的write方法，将数据写入
 }
 
-func (this *Clinent) menu() bool {
+func (this *Client) menu() bool {
 	var flag int
 
 	fmt.Println("1. 公聊模式")
@@ -61,7 +61,7 @@ func (this *Clinent) menu() bool {
 	}
 }
 
-func (this *Clinent) UpdateName() bool {
+func (this *Client) UpdateName() bool {
 	fmt.Println("请输入用户名：")
 	fmt.Scanln(&this.Name)
 
@@ -76,7 +76,70 @@ func (this *Clinent) UpdateName() bool {
 	}
 }
 
-func (this *Clinent) Run() {
+func (this *Client) PulicChat() {
+	// 提示用户发消息
+	var chatMsg string
+	fmt.Println(">>>>>>请输入聊天消息， exit退出")
+	fmt.Scanln(&chatMsg)
+
+	// 发消息给服务器
+	for chatMsg != "exit" {
+		if len(chatMsg) != 0 {
+			sendMsg := chatMsg + "\n"
+			_, err := this.conn.Write([]byte(sendMsg))
+			if err != nil {
+				fmt.Println("cnn Write err: ", err)
+				break
+			}
+		}
+
+		chatMsg = ""
+		fmt.Println(">>>>>>请输入聊天消息， exit退出")
+		fmt.Scanln(&chatMsg)
+	}
+}
+
+// 查询在线用户
+func (this *Client) SelectUsers() {
+	sendMsg := "who\n"
+
+	_, err := this.conn.Write([]byte(sendMsg))
+	if err != nil {
+		fmt.Println("conn Write error: ", err)
+	}
+}
+
+// 私聊模式
+func (this *Client) PrivateChat() {
+	fmt.Println("当前在线用户：")
+	this.SelectUsers()
+
+	var selectName string
+	fmt.Println(">>>>>>请选择私聊用户：")
+	fmt.Scanln(&selectName)
+	if selectName == "" {
+		fmt.Println("用户Name错误")
+		return
+	}
+
+	var chatMsg string
+	fmt.Println(">>>>>>请输入聊天消息，exit退出")
+	fmt.Scanln(&chatMsg)
+	for chatMsg != "exit" {
+		sendMsg := "to|" + selectName + "|" + chatMsg + "\n`\n"
+		_, err := this.conn.Write([]byte(sendMsg))
+		if err != nil {
+			fmt.Println("cnn write err: ", err)
+			break
+		}
+
+		chatMsg = ""
+		fmt.Println(">>>>>>请输入聊天消息，exit退出")
+		fmt.Scanln(&chatMsg)
+	}
+}
+
+func (this *Client) Run() {
 	for this.flag != 0 {
 		for this.menu() != true {
 		}
@@ -84,10 +147,12 @@ func (this *Clinent) Run() {
 		// 根据不同的模式处理不同的业务
 		switch this.flag {
 		case 1:
-			fmt.Println("公聊模式选择...")
+			// fmt.Println("公聊模式选择...")
+			this.PulicChat()
 			break
 		case 2:
-			fmt.Println("私聊模式选择...")
+			// fmt.Println("私聊模式选择...")
+			this.PrivateChat()
 			break
 		case 3:
 			// fmt.Println("更新用户名选择...")
