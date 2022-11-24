@@ -12,6 +12,7 @@ type Clinet struct {
 
 	Name string
 	conn net.Conn
+	flag int
 }
 
 func NewClient(serverIp string, serverPort int) *Clinet {
@@ -19,6 +20,7 @@ func NewClient(serverIp string, serverPort int) *Clinet {
 	client := &Clinet{
 		ServerIP:   serverIp,
 		ServerPort: serverPort,
+		flag:       999,
 	}
 
 	// 连接server
@@ -31,6 +33,45 @@ func NewClient(serverIp string, serverPort int) *Clinet {
 	client.conn = conn
 
 	return client
+}
+
+func (this *Clinet) menu() bool {
+	var flag int
+
+	fmt.Println("1. 公聊模式")
+	fmt.Println("2. 私聊模式")
+	fmt.Println("3. 更新用户名")
+	fmt.Println("0. 退出")
+
+	fmt.Scanln(&flag) // 从键盘获取
+
+	if flag >= 0 && flag <= 3 {
+		this.flag = flag
+		return true
+	} else {
+		fmt.Println(">>>>>请输入合法范围内的数字<<<<<")
+		return false
+	}
+}
+
+func (this *Clinet) Run() {
+	for this.flag != 0 {
+		for this.menu() != true {
+		}
+
+		// 根据不同的模式处理不同的业务
+		switch this.flag {
+		case 1:
+			fmt.Println("公聊模式选择...")
+			break
+		case 2:
+			fmt.Println("私聊模式选择...")
+			break
+		case 3:
+			fmt.Println("更新用户名选择...")
+			break
+		}
+	}
 }
 
 var serverIp string
@@ -54,5 +95,6 @@ func main() {
 	}
 
 	fmt.Println(">>>>>>>>>>> 连接服务器成功...")
-	select {}
+
+	client.Run()
 }
