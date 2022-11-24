@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 )
 
 type Server struct {
@@ -73,6 +74,9 @@ func (this *Server) Handler(conn net.Conn) {
 
 	user.Online()
 
+	// 用作消息活跃
+	isAlive := make(chan bool)
+
 	// 从客户端读取数据
 	go func() {
 		buf := make([]byte, 4096)
@@ -93,11 +97,25 @@ func (this *Server) Handler(conn net.Conn) {
 			// 定义一个字符串，内容是将字节流byte类型转化为string，同时使用slice不要最后一个，也就是"\n"
 			msg := string(buf[:n-1])
 			user.DoMessage(msg)
+			isAlive <- true
 		}
 	}()
 
 	// 将此函数阻塞
-	select {}
+	for {
+		select {
+		case <-isAlive:
+			// 什么也不做，会接着执行下面的case，但不执行case满足后的情况
+		case <-time.After(time.Second * 10): // 重新开始定时10s
+			// 如果进入到这，表示10秒超时
+			// 关闭User，回收资源
+			user.SendMsg("你被踢了")
+			close(user.c)
+			conn.Close() // 关闭socket
+
+			return // runtime.Goexit
+		}
+	}
 }
 
 // 启动服务器的接口
