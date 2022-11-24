@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"sync"
 )
@@ -64,7 +65,31 @@ func (this *Server) Handler(conn net.Conn) {
 	// 广播用户上线消息
 	this.BroadCast(user, "已上线")
 
-	select {}
+	// 从客户端读取数据
+	go func() {
+		buf := make([]byte, 4096)
+
+		for {
+			n, err := conn.Read(buf)
+			if n == 0 {
+				// 如果读对端返回0，表示链接已断开
+				this.BroadCast(user, "下线")
+				return
+			}
+
+			if err != nil && err != io.EOF {
+				fmt.Println("Conn Read err: ", err)
+				return
+			}
+
+			// 定义一个字符串，内容是将字节流byte类型转化为string，同时使用slice不要最后一个，也就是"\n"
+			msg := string(buf[:n-1])
+			this.BroadCast(user, msg)
+		}
+	}()
+
+	// 将此函数阻塞
+	// select {}
 }
 
 // 启动服务器的接口
