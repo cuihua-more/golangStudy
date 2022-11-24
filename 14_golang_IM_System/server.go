@@ -106,7 +106,7 @@ func (this *Server) Handler(conn net.Conn) {
 		select {
 		case <-isAlive:
 			// 什么也不做，会接着执行下面的case，但不执行case满足后的情况
-		case <-time.After(time.Second * 10): // 重新开始定时10s
+		case <-time.After(time.Second * 300): // 重新开始定时10s
 			// 如果进入到这，表示10秒超时
 			// 关闭User，回收资源
 			user.SendMsg("你被踢了")
