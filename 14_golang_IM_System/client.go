@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net"
 )
@@ -32,8 +33,21 @@ func NewClient(serverIp string, serverPort int) *Clinet {
 	return client
 }
 
+var serverIp string
+var serverPort int
+
+// Usage: ./client -ip 127.0.0.1 -port 8888
+func init() {
+	// flag库：
+	// StringVar方法表示从执行的程序选项中获取某一项内容，保存在传入的参数中
+	flag.StringVar(&serverIp, "ip", "127.0.0.1", "设置服务器IP")
+	flag.IntVar(&serverPort, "port", 8888, "设置服务器Port")
+}
 func main() {
-	client := NewClient("127.0.0.1", 8888)
+	// 调用命令行解析
+	flag.Parse()
+
+	client := NewClient(serverIp, serverPort)
 	if client == nil {
 		fmt.Println(">>>>>>>>> 连接服务器失败...")
 		return
