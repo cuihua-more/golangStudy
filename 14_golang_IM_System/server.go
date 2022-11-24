@@ -31,6 +31,20 @@ func NewServer(ip string, port int) *Server {
 	return server
 }
 
+// 添加用户列表方法
+func (this *Server) AddUser(user *User) {
+	this.mapLock.Lock()
+	this.OnlineMap[user.Name] = user
+	this.mapLock.Unlock()
+}
+
+// 删除用户列表
+func (this *Server) DelUser(user *User) {
+	this.mapLock.Lock()
+	delete(this.OnlineMap, user.Name)
+	this.mapLock.Unlock()
+}
+
 // 监听广播Message Channel的goroutine，一旦有消息，就发送给全部在线的User
 func (this *Server) ListernMessage() {
 	for {
@@ -55,15 +69,9 @@ func (this *Server) Handler(conn net.Conn) {
 	// 当前业务
 	// fmt.Println("链接建立成功")
 
-	user := NewUser(conn)
+	user := NewUser(conn, this)
 
-	// 用户上线, 将用户加入到onlineMap中
-	this.mapLock.Lock()
-	this.OnlineMap[user.Name] = user
-	this.mapLock.Unlock()
-
-	// 广播用户上线消息
-	this.BroadCast(user, "已上线")
+	user.Online()
 
 	// 从客户端读取数据
 	go func() {
@@ -73,7 +81,7 @@ func (this *Server) Handler(conn net.Conn) {
 			n, err := conn.Read(buf)
 			if n == 0 {
 				// 如果读对端返回0，表示链接已断开
-				this.BroadCast(user, "下线")
+				user.Offline()
 				return
 			}
 
@@ -84,12 +92,12 @@ func (this *Server) Handler(conn net.Conn) {
 
 			// 定义一个字符串，内容是将字节流byte类型转化为string，同时使用slice不要最后一个，也就是"\n"
 			msg := string(buf[:n-1])
-			this.BroadCast(user, msg)
+			user.DoMessage(msg)
 		}
 	}()
 
 	// 将此函数阻塞
-	// select {}
+	select {}
 }
 
 // 启动服务器的接口
