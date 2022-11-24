@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net"
 )
 
@@ -50,9 +49,23 @@ func (this *User) Offline() {
 	this.server.BroadCast(this, "已下线")
 }
 
+func (this *User) SendMsg(msg string) {
+	this.conn.Write([]byte(msg))
+}
+
 // 用户处理消息业务
 func (this *User) DoMessage(msg string) {
-	this.server.BroadCast(this, msg)
+	if msg == "who" {
+		// 查询当前用户
+		this.server.mapLock.Lock()
+		for _, user := range this.server.OnlineMap {
+			onlineMsg := "[" + user.Name + "]" + ":" + "在线...\n"
+			this.SendMsg(onlineMsg)
+		}
+		this.server.mapLock.Unlock()
+	} else {
+		this.server.BroadCast(this, msg)
+	}
 }
 
 // 监听当前User channle的方法，一旦有消息，就发送给对端
